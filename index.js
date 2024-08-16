@@ -30,15 +30,47 @@ async function run() {
 
         // get products from Database
         app.get('/products', async (req, res) => {
-            // console.log('Pagination', req.query)
-            const page = parseInt(req.query.page)
-            const size = parseInt(req.query.size)
-            const result = await productCollections.find()
-                .skip(page * size)
-                .limit(size)
+            const { page, size, sortBy, order } = req.query;
+
+            const query = {};
+            const options = {
+                sort: {}
+            };
+
+            if (sortBy === 'price') {
+                options.sort.price = order === 'asc' ? 1 : -1;
+            } else if (sortBy === 'date') {
+                options.sort.creationDateTime = order === 'asc' ? 1 : -1;
+            }
+
+            const skip = parseInt(page) * parseInt(size);
+            const limit = parseInt(size);
+
+            const result = await productCollections.find(query, options)
+                .skip(skip)
+                .limit(limit)
                 .toArray();
-            res.send(result)
-        })
+            res.send(result);
+        });
+
+
+        // app.get('/products', async (req, res) => {
+        //     // console.log('Pagination', req.query)
+        //     const filter = req.query;
+        //     const query = {};
+        //     const options = {
+        //         sort: {
+        //             price: filter.sort === 'asc' ? 1 : -1,
+        //         }
+        //     };
+        //     const page = parseInt(req.query.page)
+        //     const size = parseInt(req.query.size)
+        //     const result = await productCollections.find(query, options)
+        //         .skip(page * size)
+        //         .limit(size)
+        //         .toArray();
+        //     res.send(result)
+        // })
         // Pagination here
         app.get('/productCount', async (req, res) => {
             const count = await productCollections.estimatedDocumentCount();
