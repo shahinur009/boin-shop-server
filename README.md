@@ -8,4 +8,4 @@ Env file setup:
 3. create a .env file and create DB_USER and DB_PASS and use them into the serversite
 
 live link:
-github link:github.com/shahinur009/boin-shop-server
+github link: https://github.com/shahinur009/boin-shop-server/tree/main
