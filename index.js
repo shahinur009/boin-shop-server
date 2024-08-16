@@ -28,9 +28,16 @@ async function run() {
         const usersCollections = client.db('Boin-shop-DB').collection('users')
         const productCollections = client.db('Boin-shop-DB').collection('products')
 
+        // get products from Database
         app.get('/products', async (req, res) => {
             const result = await productCollections.find().toArray();
             res.send(result)
+        })
+
+        // post user information to Database
+        app.post('/register', async (req, res) => {
+            const data = req.body;
+            
         })
 
 
