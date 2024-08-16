@@ -30,14 +30,31 @@ async function run() {
 
         // get products from Database
         app.get('/products', async (req, res) => {
-            const result = await productCollections.find().toArray();
+            // console.log('Pagination', req.query)
+            const page = parseInt(req.query.page)
+            const size = parseInt(req.query.size)
+            const result = await productCollections.find()
+                .skip(page * size)
+                .limit(size)
+                .toArray();
             res.send(result)
         })
+        // Pagination here
+        app.get('/productCount', async (req, res) => {
+            const count = await productCollections.estimatedDocumentCount();
+            res.send({ count });
+        })
 
-        // post user information to Database
-        app.post('/register', async (req, res) => {
-            const data = req.body;
-            
+        // user related info in Database
+        app.post('/users', async (req, res) => {
+            const user = req.body;
+            const query = { email: user?.email }
+            const existingUser = await usersCollections.findOne(query);
+            if (existingUser) {
+                return res.send({ message: 'user already exist', insertedId: null })
+            }
+            const result = await usersCollections.insertOne(user);
+            res.send(result);
         })
 
 
