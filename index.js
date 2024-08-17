@@ -5,12 +5,9 @@ require('dotenv').config();
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const port = process.env.PORT || 5000;
 
-
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.6ypdnj9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -25,85 +22,119 @@ const client = new MongoClient(uri, {
 
 async function run() {
     try {
-        const usersCollections = client.db('Boin-shop-DB').collection('users')
-        const productCollections = client.db('Boin-shop-DB').collection('products')
+        const usersCollections = client.db('Boin-shop-DB').collection('users');
+        const productCollections = client.db('Boin-shop-DB').collection('products');
 
-        // get products from Database
+        // Get products from Database
         app.get('/products', async (req, res) => {
-            const { page, size, sortBy, order } = req.query;
+            try {
+                const { page = 0, size = 9, sortBy, order, search, brand, category, minPrice, maxPrice } = req.query;
 
-            const query = {};
-            const options = {
-                sort: {}
-            };
+                const query = {};
 
-            if (sortBy === 'price') {
-                options.sort.price = order === 'asc' ? 1 : -1;
-            } else if (sortBy === 'date') {
-                options.sort.creationDateTime = order === 'asc' ? 1 : -1;
+                // Search by text
+                if (search) {
+                    query.$or = [
+                        { productName: { $regex: search, $options: 'i' } },
+                        { brandName: { $regex: search, $options: 'i' } },
+                        { description: { $regex: search, $options: 'i' } },
+                        { category: { $regex: search, $options: 'i' } }
+                    ];
+                }
+
+                // Filter by brand
+                if (brand) {
+                    query.brandName = brand;
+                }
+
+                // Filter by category
+                if (category) {
+                    query.category = category;
+                }
+
+                // Filter by price range
+                if (minPrice && maxPrice) {
+                    query.price = { $gte: parseFloat(minPrice), $lte: parseFloat(maxPrice) };
+                }
+
+                const options = { sort: {} };
+                if (sortBy === 'price') {
+                    options.sort.price = order === 'asc' ? 1 : -1;
+                } else if (sortBy === 'date') {
+                    options.sort.creationDateTime = order === 'asc' ? 1 : -1;
+                }
+
+                const skip = parseInt(page) * parseInt(size);
+                const limit = parseInt(size);
+
+                const result = await productCollections.find(query, options)
+                    .skip(skip)
+                    .limit(limit)
+                    .toArray();
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ error: error.message });
             }
-
-            const skip = parseInt(page) * parseInt(size);
-            const limit = parseInt(size);
-
-            const result = await productCollections.find(query, options)
-                .skip(skip)
-                .limit(limit)
-                .toArray();
-            res.send(result);
         });
 
-
-        // app.get('/products', async (req, res) => {
-        //     // console.log('Pagination', req.query)
-        //     const filter = req.query;
-        //     const query = {};
-        //     const options = {
-        //         sort: {
-        //             price: filter.sort === 'asc' ? 1 : -1,
-        //         }
-        //     };
-        //     const page = parseInt(req.query.page)
-        //     const size = parseInt(req.query.size)
-        //     const result = await productCollections.find(query, options)
-        //         .skip(page * size)
-        //         .limit(size)
-        //         .toArray();
-        //     res.send(result)
-        // })
-        // Pagination here
-        app.get('/productCount', async (req, res) => {
-            const count = await productCollections.estimatedDocumentCount();
-            res.send({ count });
-        })
-
-        // user related info in Database
-        app.post('/users', async (req, res) => {
-            const user = req.body;
-            const query = { email: user?.email }
-            const existingUser = await usersCollections.findOne(query);
-            if (existingUser) {
-                return res.send({ message: 'user already exist', insertedId: null })
+        // Get all brands
+        app.get('/brands', async (req, res) => {
+            try {
+                const brands = await productCollections.distinct('brandName');
+                res.send(brands);
+            } catch (error) {
+                res.status(500).send({ error: error.message });
             }
-            const result = await usersCollections.insertOne(user);
-            res.send(result);
-        })
+        });
 
+        // Get all categories
+        app.get('/categories', async (req, res) => {
+            try {
+                const categories = await productCollections.distinct('category');
+                res.send(categories);
+            } catch (error) {
+                res.status(500).send({ error: error.message });
+            }
+        });
+
+        // Get product count
+        app.get('/productCount', async (req, res) => {
+            try {
+                const count = await productCollections.estimatedDocumentCount();
+                res.send({ count });
+            } catch (error) {
+                res.status(500).send({ error: error.message });
+            }
+        });
+
+        // Add a new user
+        app.post('/users', async (req, res) => {
+            try {
+                const user = req.body;
+                const query = { email: user?.email };
+                const existingUser = await usersCollections.findOne(query);
+                if (existingUser) {
+                    return res.send({ message: 'User already exists', insertedId: null });
+                }
+                const result = await usersCollections.insertOne(user);
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ error: error.message });
+            }
+        });
 
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
-    } finally {
-
+    } catch (error) {
+        console.error('Error connecting to MongoDB:', error);
     }
 }
 run().catch(console.dir);
 
-
-
 app.get('/', (req, res) => {
-    res.send('boin server is running')
-})
+    res.send('Boin server is running');
+});
 
 app.listen(port, () => {
-    console.log(`Boin server is running on port ${port}`)
-})
+    console.log(`Boin server is running on port ${port}`);
+});
