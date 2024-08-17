@@ -6,7 +6,17 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 const port = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use(
+    cors({
+      origin: [
+        "http://localhost:5173",
+        "https://boin-shop.web.app",
+        "https://boin-shop.firebaseapp.com",
+      ],
+      credentials: true,
+    })
+  );
+  
 app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.6ypdnj9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -56,14 +66,14 @@ async function run() {
                 if (minPrice && maxPrice) {
                     query.price = { $gte: parseFloat(minPrice), $lte: parseFloat(maxPrice) };
                 }
-
+                // sort by price and date
                 const options = { sort: {} };
                 if (sortBy === 'price') {
                     options.sort.price = order === 'asc' ? 1 : -1;
                 } else if (sortBy === 'date') {
                     options.sort.creationDateTime = order === 'asc' ? 1 : -1;
                 }
-
+                // pagination functions
                 const skip = parseInt(page) * parseInt(size);
                 const limit = parseInt(size);
 
@@ -122,11 +132,9 @@ async function run() {
                 res.status(500).send({ error: error.message });
             }
         });
-
-        await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
-    } catch (error) {
-        console.error('Error connecting to MongoDB:', error);
+    } finally {
+        // console.error('Error connecting to MongoDB:', error);
     }
 }
 run().catch(console.dir);
