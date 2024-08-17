@@ -6,4 +6,4 @@ Project Clone and Setup:
 5. Then command in terminal 'nodemon index.js'.
 
 github link: https://github.com/shahinur009/boin-shop-server
-Live Link: 
+Live Link: https://boin-shop-server.vercel.app
